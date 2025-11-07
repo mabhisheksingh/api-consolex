@@ -1,32 +1,4 @@
 {
-  "ID12":{
-    "isEnabled":true,
-    "name": "AWS API",
-    "description": "ABHI",
-    "endpoint": "https://abi.com",
-    "method": "POST",
-    "headers": {
-      "ac": 1,
-      "contentType": "applocation/text"
-    },
-    "inputSchema": {
-      "name": {
-        "type": "object",
-        "value": "",
-        "defaultValue": "",
-        "isMandatory": false
-      },
-      "name1": {
-        "type": "object",
-        "value": "",
-        "defaultValue": "",
-        "isMandatory": false
-      }
-    },
-    "params": {
-
-    }
-  },
   "restful1": {
     "isEnabled":true,
     "name": "Get User API",
@@ -37,22 +9,22 @@
       "ac": 1,
       "contentType": "application/json"
     },
-    "inputSchema": {
-      "name": {
-        "type": "object",
-        "value": "",
-        "defaultValue": "",
-        "isMandatory": false
-      },
-      "name1": {
-        "type": "object",
-        "value": "",
-        "defaultValue": "",
-        "isMandatory": false
-      }
-    },
     "params": {
 
+    },
+    "body": {
+      "mode": "none",
+      "rawLanguage": "json",
+      "raw": "",
+      "formData": [],
+      "urlEncoded": [],
+      "binary": {
+        "fileName": ""
+      },
+      "graphql": {
+        "query": "",
+        "variables": "{}"
+      }
     }
 
   }

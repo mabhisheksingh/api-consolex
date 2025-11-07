@@ -1,6 +1,8 @@
+import AddIcon from '@mui/icons-material/Add'
 import ApiIcon from '@mui/icons-material/Api'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 import MenuIcon from '@mui/icons-material/Menu'
 import Box from '@mui/material/Box'
@@ -13,19 +15,39 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import Paper from '@mui/material/Paper'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import Typography from '@mui/material/Typography'
+import Tooltip from '@mui/material/Tooltip'
 
 function Sidebar({
   drawerWidth,
   collections,
+  totalCount = 0,
   selectedId,
   mobileOpen,
   onClose,
   onSelect,
   collapsed = false,
   onToggle,
+  onCreateClick,
+  filterStatus = 'all',
+  onFilterChange,
 }) {
   const desktopWidth = collapsed ? 72 : drawerWidth
+
+  const handleFilterSelect = (event) => {
+    onFilterChange?.(event.target.value)
+  }
+
+  const cycleFilter = () => {
+    const order = ['all', 'enabled', 'disabled']
+    const currentIndex = order.indexOf(filterStatus)
+    const next = order[(currentIndex + 1) % order.length]
+    onFilterChange?.(next)
+  }
 
   const content = (
     <Box
@@ -40,40 +62,64 @@ function Sidebar({
         sx={{
           px: 3,
           py: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 1,
           borderBottom: '1px solid',
           borderColor: 'divider',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="subtitle2" sx={{ textTransform: 'uppercase', letterSpacing: '0.12em' }}>
             API Collections
           </Typography>
+          <IconButton
+            size="small"
+            onClick={collapsed ? onToggle : onClose}
+            aria-label={collapsed ? 'Open navigation' : 'Close navigation'}
+            sx={{ display: 'inline-flex' }}
+          >
+            {collapsed ? <MenuIcon fontSize="small" /> : <CloseIcon fontSize="small" />}
+          </IconButton>
+        </Box>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel id="filter-status-label">Filter</InputLabel>
+              <Select
+                labelId="filter-status-label"
+                value={filterStatus}
+                label="Filter"
+                onChange={handleFilterSelect}
+              >
+                <MenuItem value="all">All APIs</MenuItem>
+                <MenuItem value="enabled">Enabled</MenuItem>
+                <MenuItem value="disabled">Disabled</MenuItem>
+              </Select>
+            </FormControl>
+            <IconButton
+              size="small"
+              onClick={onCreateClick}
+              sx={{ display: 'inline-flex' }}
+              aria-label="Create new API"
+            >
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Box>
           <Typography variant="caption" color="text.secondary">
-            {collections.length} available
+            {collections.length} shown · {totalCount} total
           </Typography>
         </Box>
-        <IconButton
-          size="small"
-          onClick={collapsed ? onToggle : onClose}
-          sx={{ display: 'inline-flex' }}
-          aria-label={collapsed ? 'Open navigation' : 'Close navigation'}
-        >
-          {collapsed ? <MenuIcon fontSize="small" /> : <CloseIcon fontSize="small" />}
-        </IconButton>
       </Box>
-      <Box sx={{ px: 3, py: 2, display: { xs: 'none', sm: 'block' } }}>
-        <Typography variant="h6" gutterBottom>
-          Collections
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {collections.length} available
-        </Typography>
-      </Box>
-      <Divider sx={{ display: { xs: 'none', sm: 'block' } }} />
+      <Divider />
       <List sx={{ flexGrow: 1, overflowY: 'auto', py: 0 }}>
         {collections.map((collection) => {
           const identifier = collection.id || collection.key
@@ -171,6 +217,30 @@ function Sidebar({
             py: 2,
           }}
         >
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Tooltip title={`Filter: ${filterStatus}`}>
+              <IconButton
+                color="primary"
+                onClick={cycleFilter}
+                aria-label="Cycle filter"
+                size="large"
+                sx={{ mb: 1 }}
+              >
+                <FilterListIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <IconButton
+              color="primary"
+              onClick={onCreateClick}
+              aria-label="Create new API"
+              size="large"
+              sx={{ mb: 1 }}
+            >
+              <AddIcon />
+            </IconButton>
+          </Box>
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <IconButton
               color="primary"

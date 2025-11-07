@@ -1,0 +1,75 @@
+import rawCollections from '../../data/apiCollections.json'
+
+const LS_KEY = 'api_consolex_collections'
+
+// record <-> array helpers
+const mapCollections = (record) =>
+  Object.entries(record || {}).map(([key, value]) => ({
+    ...value,
+    key,
+    id: value?.id || key,
+  }))
+
+const toRecord = (list) =>
+  (list || []).reduce((acc, item) => {
+    const id = item.id || item.key
+    if (id) acc[id] = { ...item, id }
+    return acc
+  }, {})
+
+function readStore() {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch (_) {}
+  // fallback to bundled json
+  return rawCollections || {}
+}
+
+function writeStore(record) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(record))
+  } catch (e) {
+    console.warn('Failed to persist to localStorage:', e)
+  }
+}
+
+export async function listCollections() {
+  const data = readStore()
+  return mapCollections(data)
+}
+
+export async function getCollectionById(id) {
+  const data = readStore()
+  return data?.[id] ? { ...data[id], id: data[id].id || id, key: id } : null
+}
+
+export async function createCollectionUtil(payload) {
+  const data = readStore()
+  const id = payload.id || payload.key || `api-${Date.now()}`
+  const record = {
+    ...data,
+    [id]: { ...payload, id },
+  }
+  writeStore(record)
+  const created = record[id]
+  return { ...created, id, key: id }
+}
+
+export async function updateCollection(id, updates) {
+  const data = readStore()
+  if (!data[id]) throw new Error('Collection not found')
+  const updated = { ...data[id], ...updates, id }
+  const record = { ...data, [id]: updated }
+  writeStore(record)
+  return { ...updated, key: id }
+}
+
+export async function deleteCollection(id) {
+  const data = readStore()
+  if (!data[id]) return false
+  const record = { ...data }
+  delete record[id]
+  writeStore(record)
+  return true
+}

@@ -2,21 +2,26 @@
   "name": "api-consolex",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://mabhisheksingh.github.io/api-consolex/",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.1.3",
     "@mui/material": "^6.1.3",
-    "preact": "^10.27.2"
+    "preact": "^10.27.2",
+    "react-json-view-lite": "^2.5.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.2",
+    "gh-pages": "^6.3.0",
     "vite": "^7.1.7"
   }
 }

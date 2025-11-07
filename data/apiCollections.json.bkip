@@ -1,0 +1,75 @@
+{
+  "ID12":{
+    "isEnabled":true,
+    "name": "AWS API",
+    "description": "ABHI",
+    "endpoint": "https://abi.com",
+    "method": "POST",
+    "headers": {
+      "ac": 1,
+      "contentType": "applocation/text"
+    },
+    "params": {
+
+    },
+    "body": {
+      "mode": "raw",
+      "rawLanguage": "json",
+      "raw": "{\n  \"name\": \"\",\n  \"name1\": \"\"\n}",
+      "formData": [
+        {
+          "key": "file",
+          "type": "file",
+          "value": ""
+        },
+        {
+          "key": "note",
+          "type": "text",
+          "value": ""
+        }
+      ],
+      "urlEncoded": [
+        {
+          "key": "page",
+          "value": ""
+        }
+      ],
+      "binary": {
+        "fileName": ""
+      },
+      "graphql": {
+        "query": "query Example($id: ID!) {\\n  example(id: $id) {\\n    id\\n    name\\n  }\\n}",
+        "variables": "{\\n  \"id\": \"1\"\\n}"
+      }
+    }
+  },
+  "restful1": {
+    "isEnabled":true,
+    "name": "Get User API",
+    "description": "Get User api ",
+    "endpoint": "https://api.restful-api.dev/objects",
+    "method": "GET",
+    "headers": {
+      "ac": 1,
+      "contentType": "application/json"
+    },
+    "params": {
+
+    },
+    "body": {
+      "mode": "none",
+      "rawLanguage": "json",
+      "raw": "",
+      "formData": [],
+      "urlEncoded": [],
+      "binary": {
+        "fileName": ""
+      },
+      "graphql": {
+        "query": "",
+        "variables": "{}"
+      }
+    }
+
+  }
+}

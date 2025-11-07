@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import Box from '@mui/material/Box'
+import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -7,11 +8,21 @@ import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
+import Grid from '@mui/material/Grid'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import SendIcon from '@mui/icons-material/Send'
+import CodeIcon from '@mui/icons-material/Code'
+import RequestBodyEditor from './RequestBodyEditor'
+import RequestSnippetPanel from './RequestSnippetPanel'
+import {
+  DEFAULT_FORM_DATA_ROW,
+  DEFAULT_URL_ENCODED_ROW,
+  normalizeBodyMode,
+  getDefaultBodyState,
+} from '../utils/bodyConfig'
 
 function EmptyState() {
   return (
@@ -44,42 +55,64 @@ function toEditableState(record = {}) {
   }, {})
 }
 
-function MainContent({ collection }) {
+function MainContent({
+  collection,
+  collectionsLoading,
+  collectionsError,
+  onToggleEnabled,
+}) {
   const [activeTab, setActiveTab] = useState(0)
   const [headersState, setHeadersState] = useState({})
   const [paramsState, setParamsState] = useState({})
-  const [bodyState, setBodyState] = useState({})
+  const [bodyState, setBodyState] = useState(getDefaultBodyState())
   const [isSending, setIsSending] = useState(false)
   const [responseInfo, setResponseInfo] = useState(null)
   const [isEditingEndpoint, setIsEditingEndpoint] = useState(false)
   const [currentEndpoint, setCurrentEndpoint] = useState('')
-
-  const inputSchema = useMemo(() => collection?.inputSchema || {}, [collection])
+  const [isSnippetCollapsed, setIsSnippetCollapsed] = useState(false)
 
   useEffect(() => {
     if (!collection) return
     setActiveTab(0)
     setHeadersState(toEditableState(collection.headers))
     setParamsState(toEditableState(collection.params))
-    setBodyState(
-      Object.entries(collection.inputSchema || {}).reduce((acc, [key, schema]) => {
-        const initial = schema?.value ?? schema?.defaultValue ?? ''
-        acc[key] = initial === undefined || initial === null ? '' : String(initial)
-        return acc
-      }, {})
-    )
+    const bodyConfig = collection.body || {}
+    const buildFormData = (source) =>
+      Array.isArray(source)
+        ? source.map((item) => ({
+            key: item?.key || '',
+            value: item?.value ?? '',
+            type: item?.type || 'text',
+          }))
+        : []
+    const buildUrlEncoded = (source) =>
+      Array.isArray(source)
+        ? source.map((item) => ({
+            key: item?.key || '',
+            value: item?.value ?? '',
+          }))
+        : []
+    const formData = buildFormData(bodyConfig.formData)
+    const urlEncoded = buildUrlEncoded(bodyConfig.urlEncoded)
+    setBodyState({
+      mode: normalizeBodyMode(bodyConfig.mode || 'none'),
+      rawLanguage: bodyConfig.rawLanguage || 'json',
+      raw: bodyConfig.raw ?? '',
+      formData: formData.length ? formData : [{ ...DEFAULT_FORM_DATA_ROW }],
+      urlEncoded: urlEncoded.length ? urlEncoded : [{ ...DEFAULT_URL_ENCODED_ROW }],
+      binary: {
+        fileName: bodyConfig.binary?.fileName ?? '',
+        file: null,
+      },
+      graphql: {
+        query: bodyConfig.graphql?.query ?? '',
+        variables: bodyConfig.graphql?.variables ?? '{}',
+      },
+    })
     setResponseInfo(null)
     setCurrentEndpoint(collection.endpoint || '')
     setIsEditingEndpoint(false)
   }, [collection])
-
-  if (!collection) {
-    return (
-      <Box sx={{ py: 2 }}>
-        <EmptyState />
-      </Box>
-    )
-  }
 
   const handleSend = async () => {
     const trimmedEndpoint = currentEndpoint.trim()
@@ -121,12 +154,6 @@ function MainContent({ collection }) {
         return acc
       }, {})
 
-      const bodyPayload = Object.entries(bodyState).reduce((acc, [key, value]) => {
-        if (value === undefined || value === null || String(value).length === 0) return acc
-        acc[key] = value
-        return acc
-      }, {})
-
       const fetchOptions = {
         method,
         headers: { ...preparedHeaders },
@@ -134,10 +161,81 @@ function MainContent({ collection }) {
 
       const methodHasBody = !['GET', 'HEAD'].includes(method)
       if (methodHasBody) {
-        if (!fetchOptions.headers['Content-Type']) {
-          fetchOptions.headers['Content-Type'] = 'application/json'
+        const setHeader = (headers, name, value) => {
+          const existingKey = Object.keys(headers).find((key) => key.toLowerCase() === name.toLowerCase())
+          if (existingKey) {
+            headers[existingKey] = value
+          } else {
+            headers[name] = value
+          }
         }
-        fetchOptions.body = Object.keys(bodyPayload).length ? JSON.stringify(bodyPayload) : null
+
+        const removeHeader = (headers, name) => {
+          const existingKey = Object.keys(headers).find((key) => key.toLowerCase() === name.toLowerCase())
+          if (existingKey) {
+            delete headers[existingKey]
+          }
+        }
+
+        const bodyMode = bodyState.mode
+        if (bodyMode === 'raw') {
+          const rawValue = bodyState.raw || ''
+          const language = bodyState.rawLanguage || 'json'
+          const contentTypeMap = {
+            json: 'application/json',
+            text: 'text/plain',
+            xml: 'application/xml',
+            html: 'text/html',
+          }
+          setHeader(fetchOptions.headers, 'Content-Type', contentTypeMap[language] || 'text/plain')
+          fetchOptions.body = rawValue
+        } else if (bodyMode === 'form-data') {
+          const formData = new FormData()
+          bodyState.formData.forEach((item) => {
+            if (!item.key) return
+            if (item.type === 'file') {
+              if (item.value instanceof File) {
+                formData.append(item.key, item.value)
+              }
+            } else {
+              if (item.value !== undefined && item.value !== null) {
+                formData.append(item.key, String(item.value))
+              }
+            }
+          })
+          fetchOptions.body = formData
+          removeHeader(fetchOptions.headers, 'Content-Type')
+        } else if (bodyMode === 'binary') {
+          if (bodyState.binary?.file instanceof File) {
+            fetchOptions.body = bodyState.binary.file
+            removeHeader(fetchOptions.headers, 'Content-Type')
+          } else {
+            fetchOptions.body = null
+          }
+        } else if (bodyMode === 'urlencoded') {
+          const params = new URLSearchParams()
+          bodyState.urlEncoded.forEach((item) => {
+            if (!item.key) return
+            params.append(item.key, item.value ?? '')
+          })
+          setHeader(fetchOptions.headers, 'Content-Type', 'application/x-www-form-urlencoded')
+          fetchOptions.body = params.toString()
+        } else if (bodyMode === 'graphql') {
+          const payload = {
+            query: bodyState.graphql?.query || '',
+            variables: (() => {
+              try {
+                return JSON.parse(bodyState.graphql?.variables || '{}')
+              } catch (error) {
+                return bodyState.graphql?.variables || '{}'
+              }
+            })(),
+          }
+          setHeader(fetchOptions.headers, 'Content-Type', 'application/json')
+          fetchOptions.body = JSON.stringify(payload)
+        } else {
+          fetchOptions.body = null
+        }
       }
 
       const response = await fetch(requestUrl.toString(), fetchOptions)
@@ -158,20 +256,6 @@ function MainContent({ collection }) {
         url: requestUrl.toString(),
         durationMs: duration,
       })
-
-      if (!response.ok) {
-        setResponseInfo((prev) =>
-          prev
-            ? prev
-            : {
-                status: response.status,
-                ok: false,
-                body: parsed,
-                url: requestUrl.toString(),
-                durationMs: duration,
-              }
-        )
-      }
     } catch (error) {
       const message = error?.message || 'Request failed.'
       setResponseInfo({
@@ -216,180 +300,223 @@ function MainContent({ collection }) {
     )
   }
 
-  const schemaEntries = Object.entries(inputSchema)
+  const handleToggleEnabled = () => {
+    if (!collection) return
+    const identifier = collection.id || collection.key
+    onToggleEnabled?.(identifier, !collection.isEnabled)
+  }
 
   return (
     <Stack spacing={3}>
-      <Card>
-        <CardContent>
-          <Stack spacing={2}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', gap: 2 }}>
-              <Box>
-                <Typography variant="h4" gutterBottom>
-                  {collection.name}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  {collection.description || 'No description provided.'}
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={!isSending ? <SendIcon /> : null}
-                onClick={handleSend}
-                disabled={isSending || !collection.isEnabled}
-                sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
-              >
-                {isSending ? <CircularProgress color="inherit" size={22} /> : 'Send Request'}
-              </Button>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }}>
-              <Chip label={collection.method?.toUpperCase() || 'UNKNOWN'} color="primary" variant="filled" sx={{ fontWeight: 600 }} />
-              <Chip label={collection.isEnabled ? 'Enabled' : 'Disabled'} color={collection.isEnabled ? 'success' : 'default'} variant={collection.isEnabled ? 'filled' : 'outlined'} />
-              <Chip label={collection.id || collection.key || 'No ID'} variant="outlined" />
-            </Stack>
-            <Divider flexItem />
-            <Box>
-              <Typography variant="overline" display="block" gutterBottom sx={{ letterSpacing: '0.1em' }}>
-                Endpoint
-              </Typography>
-              {isEditingEndpoint ? (
-                <TextField
-                  value={currentEndpoint}
-                  onChange={(event) => setCurrentEndpoint(event.target.value)}
-                  onBlur={() => setIsEditingEndpoint(false)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      setIsEditingEndpoint(false)
-                    }
-                    if (event.key === 'Escape') {
-                      event.preventDefault()
-                      setCurrentEndpoint(collection.endpoint || '')
-                      setIsEditingEndpoint(false)
-                    }
-                  }}
-                  autoFocus
-                  size="small"
-                  fullWidth
-                  placeholder="https://api.example.com/resource"
-                />
-              ) : (
-                <Typography
-                  variant="h6"
-                  component="code"
-                  onClick={() => setIsEditingEndpoint(true)}
-                  sx={{
-                    p: 1.25,
-                    display: 'inline-block',
-                    borderRadius: 1,
-                    bgcolor: 'background.default',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      color: 'primary.light',
-                    },
-                  }}
-                >
-                  {currentEndpoint || 'Click to set endpoint'}
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
+      {collectionsError && (
+        <Alert severity="error">{collectionsError}</Alert>
+      )}
 
-      <Card>
-        <CardContent>
-          <Tabs
-            value={activeTab}
-            onChange={(_, value) => setActiveTab(value)}
-            variant="scrollable"
-            allowScrollButtonsMobile
-          >
-            <Tab label="Headers" />
-            <Tab label="Params" />
-            <Tab label="Body" />
-          </Tabs>
-          <Divider />
-          <TabPanel value={activeTab} index={0}>
-            {renderKeyValueFields(Object.entries(collection.headers || {}), headersState, setHeadersState, 'No headers configured.')}
-          </TabPanel>
-          <TabPanel value={activeTab} index={1}>
-            {renderKeyValueFields(Object.entries(collection.params || {}), paramsState, setParamsState, 'No parameters configured.')}
-          </TabPanel>
-          <TabPanel value={activeTab} index={2}>
-            {schemaEntries.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No input schema documented.
-              </Typography>
-            ) : (
-              <Stack spacing={2}>
-                {schemaEntries.map(([fieldName, schema]) => (
-                  <TextField
-                    key={fieldName}
-                    label={`${fieldName}${schema?.type ? ` (${schema.type})` : ''}`}
-                    value={bodyState[fieldName] ?? ''}
-                    onInput={(event) =>
-                      setBodyState((prev) => ({
-                        ...prev,
-                        [fieldName]: event.target.value,
-                      }))
-                    }
-                    fullWidth
-                    size="small"
-                    helperText={schema?.isMandatory ? 'Mandatory field' : 'Optional field'}
-                  />
-                ))}
-              </Stack>
-            )}
-          </TabPanel>
-        </CardContent>
-      </Card>
-
-      {responseInfo && (
+      {collectionsLoading && (
         <Card>
-          <CardContent>
-            <Stack spacing={2}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant="h6">
-                  Response
-                </Typography>
-                <Chip
-                  label={`Status: ${responseInfo.status}`}
-                  color={responseInfo.ok ? 'success' : 'error'}
-                  sx={{ ml: 'auto' }}
-                />
-              </Box>
-              <Typography variant="caption" color="text.secondary">
-                Response time: {((responseInfo.durationMs ?? 0) / 1000).toFixed(3)} seconds
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {responseInfo.url}
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  bgcolor: 'background.default',
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  p: 2,
-                  maxHeight: 320,
-                  overflow: 'auto',
-                  fontFamily: 'Roboto Mono, monospace',
-                  fontSize: '0.85rem',
-                }}
-              >
-                {typeof responseInfo.body === 'string'
-                  ? responseInfo.body || 'No content returned.'
-                  : JSON.stringify(responseInfo.body, null, 2)}
-              </Box>
-            </Stack>
+          <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <CircularProgress size={24} />
+            <Typography>Loading API collections…</Typography>
           </CardContent>
         </Card>
+      )}
+
+      {collection ? (
+        <Grid container spacing={3} alignItems="stretch">
+          <Grid item xs={12} xl={isSnippetCollapsed ? 12 : 8}>
+            <Stack spacing={3} sx={{ height: '100%' }}>
+              <Card>
+                <CardContent>
+                  <Stack spacing={2}>
+                <Stack
+                  direction={{ xs: 'column', md: 'row' }}
+                  spacing={2}
+                  alignItems={{ xs: 'flex-start', md: 'center' }}
+                  justifyContent="space-between"
+                >
+                  <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                    <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
+                      {collection.name}
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+                      {collection.description || 'No description provided.'}
+                    </Typography>
+                  </Stack>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }}>
+                    <Button
+                      variant={collection.isEnabled ? 'outlined' : 'contained'}
+                      color={collection.isEnabled ? 'warning' : 'success'}
+                      onClick={handleToggleEnabled}
+                      sx={{ minWidth: 140 }}
+                    >
+                      {collection.isEnabled ? 'Disable API' : 'Enable API'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={!isSending ? <SendIcon /> : null}
+                      onClick={handleSend}
+                      disabled={isSending || !collection.isEnabled}
+                      sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
+                    >
+                      {isSending ? <CircularProgress color="inherit" size={22} /> : 'Send Request'}
+                    </Button>
+                  </Stack>
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                  <Chip label={collection.method?.toUpperCase() || 'UNKNOWN'} color="primary" variant="filled" sx={{ fontWeight: 600 }} />
+                  <Chip label={collection.id || collection.key || 'No ID'} variant="outlined" />
+                </Stack>
+                <Divider flexItem />
+                <Box>
+                  <Typography variant="overline" display="block" gutterBottom sx={{ letterSpacing: '0.1em' }}>
+                    Endpoint
+                  </Typography>
+                  {isEditingEndpoint ? (
+                    <TextField
+                      value={currentEndpoint}
+                      onChange={(event) => setCurrentEndpoint(event.target.value)}
+                      onBlur={() => setIsEditingEndpoint(false)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          setIsEditingEndpoint(false)
+                        }
+                        if (event.key === 'Escape') {
+                          event.preventDefault()
+                          setCurrentEndpoint(collection.endpoint || '')
+                          setIsEditingEndpoint(false)
+                        }
+                      }}
+                      autoFocus
+                      size="small"
+                      fullWidth
+                      placeholder="https://api.example.com/resource"
+                    />
+                  ) : (
+                    <Typography
+                      variant="h6"
+                      component="code"
+                      onClick={() => setIsEditingEndpoint(true)}
+                      sx={{
+                        p: 1.25,
+                        display: 'inline-block',
+                        borderRadius: 1,
+                        bgcolor: 'background.default',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          color: 'primary.light',
+                        },
+                      }}
+                    >
+                      {currentEndpoint || 'Click to set endpoint'}
+                    </Typography>
+                  )}
+                </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <Tabs
+                    value={activeTab}
+                    onChange={(_, value) => setActiveTab(value)}
+                    variant="scrollable"
+                    allowScrollButtonsMobile
+                  >
+                    <Tab label="Headers" />
+                    <Tab label="Params" />
+                    <Tab label="Body" />
+                  </Tabs>
+                  <Divider />
+                  <TabPanel value={activeTab} index={0}>
+                    {renderKeyValueFields(Object.entries(collection.headers || {}), headersState, setHeadersState, 'No headers configured.')}
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={1}>
+                    {renderKeyValueFields(Object.entries(collection.params || {}), paramsState, setParamsState, 'No parameters configured.')}
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={2}>
+                    <RequestBodyEditor bodyState={bodyState} setBodyState={setBodyState} />
+                  </TabPanel>
+                </CardContent>
+              </Card>
+
+              {responseInfo && (
+                <Card>
+                  <CardContent>
+                    <Stack spacing={2}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                        <Typography variant="h6">
+                          Response
+                        </Typography>
+                        <Chip
+                          label={`Status: ${responseInfo.status}`}
+                          color={responseInfo.ok ? 'success' : 'error'}
+                          sx={{ ml: 'auto' }}
+                        />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Response time: {((responseInfo.durationMs ?? 0) / 1000).toFixed(3)} seconds
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {responseInfo.url}
+                      </Typography>
+                      <Box
+                        component="pre"
+                        sx={{
+                          bgcolor: 'background.default',
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          p: 2,
+                          maxHeight: 320,
+                          overflow: 'auto',
+                          fontFamily: 'Roboto Mono, monospace',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {typeof responseInfo.body === 'string'
+                          ? responseInfo.body || 'No content returned.'
+                          : JSON.stringify(responseInfo.body, null, 2)}
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              )}
+            </Stack>
+          </Grid>
+          {isSnippetCollapsed ? (
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<CodeIcon />}
+                  onClick={() => setIsSnippetCollapsed(false)}
+                >
+                  Show request snippets
+                </Button>
+              </Box>
+            </Grid>
+          ) : (
+            <Grid item xs={12} xl={4}>
+              <RequestSnippetPanel
+                endpoint={currentEndpoint || collection.endpoint || ''}
+                method={(collection.method || 'GET').toUpperCase()}
+                headers={headersState}
+                body={bodyState}
+                collapsed={isSnippetCollapsed}
+                onCollapsedChange={setIsSnippetCollapsed}
+              />
+            </Grid>
+          )}
+        </Grid>
+      ) : (
+        !collectionsLoading && <EmptyState />
       )}
     </Stack>
   )
