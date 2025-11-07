@@ -4,7 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline'
 import { ThemeProvider } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
-import theme from './theme'
+import createAppTheme from './theme'
 import { fetchCollections, createCollection, updateCollection } from './services/apiCollections'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
@@ -15,6 +15,20 @@ import Footer from './components/Footer'
 const drawerWidth = 280
 
 export function App() {
+  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
+  const isDesktop = useMediaQuery('(min-width:600px)')
+
+  const [colorMode, setColorMode] = useState(() => {
+    if (typeof window === 'undefined') return prefersDarkMode ? 'dark' : 'light'
+    const stored = window.localStorage.getItem('api-consolex-color-mode')
+    if (stored === 'light' || stored === 'dark') return stored
+    return prefersDarkMode ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    setColorMode((prev) => prev || (prefersDarkMode ? 'dark' : 'light'))
+  }, [prefersDarkMode])
+
   const [collections, setCollections] = useState([])
   const [collectionsLoading, setCollectionsLoading] = useState(true)
   const [collectionsError, setCollectionsError] = useState(null)
@@ -23,7 +37,6 @@ export function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
-  const isDesktop = useMediaQuery('(min-width:600px)')
 
   useEffect(() => {
     let active = true
@@ -119,6 +132,8 @@ export function App() {
 
   const isSidebarVisible = isDesktop ? !isSidebarCollapsed : isSidebarOpen
 
+  const theme = useMemo(() => createAppTheme(colorMode), [colorMode])
+
   const handleCreateCollection = async (payload) => {
     const created = await createCollection(payload)
     setCollections((prev) => [...prev, created])
@@ -157,6 +172,18 @@ export function App() {
     setFilterStatus(status)
   }
 
+  const handleToggleTheme = () => {
+    setColorMode((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      try {
+        window.localStorage.setItem('api-consolex-color-mode', next)
+      } catch (error) {
+        console.warn('Failed to persist color mode', error)
+      }
+      return next
+    })
+  }
+
   useEffect(() => {
     if (isCreating) return
     if (!filteredCollections.length) {
@@ -184,7 +211,12 @@ export function App() {
           bgcolor: 'background.default',
         }}
       >
-        <Header onMenuClick={handleMenuToggle} sidebarVisible={isSidebarVisible} />
+        <Header
+          onMenuClick={handleMenuToggle}
+          sidebarVisible={isSidebarVisible}
+          colorMode={colorMode}
+          onToggleTheme={handleToggleTheme}
+        />
         <Box sx={{ display: 'flex', flexGrow: 1, width: '100%' }}>
           <Sidebar
             drawerWidth={drawerWidth}
