@@ -20,8 +20,21 @@ function Header({ onMenuClick, sidebarVisible, colorMode = 'dark', onToggleTheme
         backgroundImage: 'linear-gradient(90deg, rgba(100,181,246,1) 0%, rgba(63,81,181,1) 100%)',
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between', gap: 2 }}>
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
+      <Toolbar
+        sx={{
+          justifyContent: 'space-between',
+          gap: 2,
+          flexWrap: 'wrap',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          rowGap: { xs: 1.5, sm: 0 },
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
+          sx={{ minWidth: 0, flexWrap: 'wrap', rowGap: 1 }}
+        >
           <IconButton
             color="inherit"
             aria-label={sidebarVisible ? 'Close navigation' : 'Open navigation'}
@@ -32,10 +45,22 @@ function Header({ onMenuClick, sidebarVisible, colorMode = 'dark', onToggleTheme
             {sidebarVisible ? <CloseIcon /> : <MenuIcon />}
           </IconButton>
           <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ fontWeight: 600, whiteSpace: { xs: 'normal', sm: 'nowrap' } }}
+            >
               API ConsoleX
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                opacity: 0.8,
+                whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
               Manage and explore your API collections with ease
             </Typography>
           </Box>

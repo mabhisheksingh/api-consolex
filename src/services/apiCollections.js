@@ -3,6 +3,7 @@ import {
   listCollections,
   createCollectionUtil,
   updateCollection as updateCollectionUtil,
+  deleteCollection as deleteCollectionUtil,
 } from '../utils/api_util'
 const mapCollections = (record) =>
   Object.entries(record || {}).map(([key, value]) => ({
@@ -31,4 +32,9 @@ export async function createCollection(newCollection) {
 export async function updateCollection(id, updates) {
   const updated = await updateCollectionUtil(id, updates)
   return updated
+}
+
+export async function deleteCollection(id) {
+  const deleted = await deleteCollectionUtil(id)
+  return deleted
 }

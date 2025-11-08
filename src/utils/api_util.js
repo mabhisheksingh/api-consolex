@@ -51,25 +51,25 @@ export async function createCollectionUtil(payload) {
     ...data,
     [id]: { ...payload, id },
   }
-  writeStore(record)
   const created = record[id]
   return { ...created, id, key: id }
 }
 
 export async function updateCollection(id, updates) {
   const data = readStore()
-  if (!data[id]) throw new Error('Collection not found')
-  const updated = { ...data[id], ...updates, id }
-  const record = { ...data, [id]: updated }
+  const existing = data[id] || {}
+  const record = {
+    ...data,
+    [id]: { ...existing, ...updates, id },
+  }
   writeStore(record)
-  return { ...updated, key: id }
+  return { ...record[id] }
 }
 
 export async function deleteCollection(id) {
   const data = readStore()
   if (!data[id]) return false
-  const record = { ...data }
-  delete record[id]
-  writeStore(record)
+  const { [id]: removed, ...rest } = data
+  writeStore(rest)
   return true
 }

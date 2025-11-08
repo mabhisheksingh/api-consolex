@@ -307,7 +307,7 @@ function MainContent({
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} component="section" aria-label="API request workspace">
       {collectionsError && (
         <Alert severity="error">{collectionsError}</Alert>
       )}
@@ -322,100 +322,139 @@ function MainContent({
       )}
 
       {collection ? (
-        <Grid container spacing={3} alignItems="stretch">
-          <Grid item xs={12} xl={isSnippetCollapsed ? 12 : 8}>
+        <Box sx={{ width: '100%', px: { xs: 1.5, sm: 0 } }}>
+          <Grid
+            container
+            spacing={{ xs: 2, md: 3 }}
+            alignItems="stretch"
+            component="section"
+            aria-label={`${collection.name} details`}
+            sx={{ width: '100%', mx: 0 }}
+          >
+          <Grid item xs={12} lg={isSnippetCollapsed ? 12 : 7} xl={isSnippetCollapsed ? 12 : 8}>
             <Stack spacing={3} sx={{ height: '100%' }}>
-              <Card>
+              <Card component="section" aria-label="API summary">
                 <CardContent>
                   <Stack spacing={2}>
-                <Stack
-                  direction={{ xs: 'column', md: 'row' }}
-                  spacing={2}
-                  alignItems={{ xs: 'flex-start', md: 'center' }}
-                  justifyContent="space-between"
-                >
-                  <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                    <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
-                      {collection.name}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
-                      {collection.description || 'No description provided.'}
-                    </Typography>
-                  </Stack>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }}>
-                    <Button
-                      variant={collection.isEnabled ? 'outlined' : 'contained'}
-                      color={collection.isEnabled ? 'warning' : 'success'}
-                      onClick={handleToggleEnabled}
-                      sx={{ minWidth: 140 }}
+                    <Stack
+                      direction={{ xs: 'column', md: 'row' }}
+                      spacing={2}
+                      alignItems={{ xs: 'flex-start', md: 'center' }}
+                      justifyContent="space-between"
+                      component="header"
+                      aria-label="API overview"
                     >
-                      {collection.isEnabled ? 'Disable API' : 'Enable API'}
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={!isSending ? <SendIcon /> : null}
-                      onClick={handleSend}
-                      disabled={isSending || !collection.isEnabled}
-                      sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
+                      <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
+                          {collection.name}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+                          {collection.description || 'No description provided.'}
+                        </Typography>
+                      </Stack>
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1.5}
+                        alignItems={{ xs: 'stretch', sm: 'center' }}
+                        sx={{ width: '100%', maxWidth: { xs: '100%', md: 320 } }}
+                      >
+                        <Button
+                          variant={collection.isEnabled ? 'outlined' : 'contained'}
+                          color={collection.isEnabled ? 'warning' : 'success'}
+                          onClick={handleToggleEnabled}
+                          sx={{ minWidth: 140 }}
+                        >
+                          {collection.isEnabled ? 'Disable API' : 'Enable API'}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={!isSending ? <SendIcon /> : null}
+                          onClick={handleSend}
+                          disabled={isSending || !collection.isEnabled}
+                          sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
+                        >
+                          {isSending ? <CircularProgress color="inherit" size={22} /> : 'Send Request'}
+                        </Button>
+                      </Stack>
+                    </Stack>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={2}
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                      sx={{ flexWrap: 'wrap' }}
                     >
-                      {isSending ? <CircularProgress color="inherit" size={22} /> : 'Send Request'}
-                    </Button>
-                  </Stack>
-                </Stack>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }}>
-                  <Chip label={collection.method?.toUpperCase() || 'UNKNOWN'} color="primary" variant="filled" sx={{ fontWeight: 600 }} />
-                  <Chip label={collection.id || collection.key || 'No ID'} variant="outlined" />
-                </Stack>
-                <Divider flexItem />
-                <Box>
-                  <Typography variant="overline" display="block" gutterBottom sx={{ letterSpacing: '0.1em' }}>
-                    Endpoint
-                  </Typography>
-                  {isEditingEndpoint ? (
-                    <TextField
-                      value={currentEndpoint}
-                      onChange={(event) => setCurrentEndpoint(event.target.value)}
-                      onBlur={() => setIsEditingEndpoint(false)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault()
-                          setIsEditingEndpoint(false)
-                        }
-                        if (event.key === 'Escape') {
-                          event.preventDefault()
-                          setCurrentEndpoint(collection.endpoint || '')
-                          setIsEditingEndpoint(false)
-                        }
-                      }}
-                      autoFocus
-                      size="small"
-                      fullWidth
-                      placeholder="https://api.example.com/resource"
-                    />
-                  ) : (
-                    <Typography
-                      variant="h6"
-                      component="code"
-                      onClick={() => setIsEditingEndpoint(true)}
-                      sx={{
-                        p: 1.25,
-                        display: 'inline-block',
-                        borderRadius: 1,
-                        bgcolor: 'background.default',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          borderColor: 'primary.main',
-                          color: 'primary.light',
-                        },
-                      }}
-                    >
-                      {currentEndpoint || 'Click to set endpoint'}
-                    </Typography>
-                  )}
-                </Box>
+                      <Chip
+                        label={collection.method?.toUpperCase() || 'UNKNOWN'}
+                        color="primary"
+                        variant="filled"
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <Chip label={collection.id || collection.key || 'No ID'} variant="outlined" />
+                      {collection.tags?.length ? (
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', rowGap: 1 }}>
+                          {collection.tags.map((tag) => (
+                            <Chip key={tag} label={tag} size="small" variant="outlined" />
+                          ))}
+                        </Stack>
+                      ) : null}
+                    </Stack>
+                    <Divider flexItem />
+                    <Box component="section" aria-label="Endpoint">
+                      <Typography
+                        variant="overline"
+                        display="block"
+                        gutterBottom
+                        sx={{ letterSpacing: '0.1em' }}
+                      >
+                        Endpoint
+                      </Typography>
+                      {isEditingEndpoint ? (
+                        <TextField
+                          value={currentEndpoint}
+                          onChange={(event) => setCurrentEndpoint(event.target.value)}
+                          onBlur={() => setIsEditingEndpoint(false)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault()
+                              setIsEditingEndpoint(false)
+                            }
+                            if (event.key === 'Escape') {
+                              event.preventDefault()
+                              setCurrentEndpoint(collection.endpoint || '')
+                              setIsEditingEndpoint(false)
+                            }
+                          }}
+                          autoFocus
+                          size="small"
+                          fullWidth
+                          placeholder="https://api.example.com/resource"
+                        />
+                      ) : (
+                        <Typography
+                          variant="h6"
+                          component="code"
+                          onClick={() => setIsEditingEndpoint(true)}
+                          sx={{
+                            p: 1.25,
+                            display: 'inline-block',
+                            borderRadius: 1,
+                            bgcolor: 'background.default',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            cursor: 'pointer',
+                            maxWidth: '100%',
+                            wordBreak: 'break-all',
+                            '&:hover': {
+                              borderColor: 'primary.main',
+                              color: 'primary.light',
+                            },
+                          }}
+                        >
+                          {currentEndpoint || 'Click to set endpoint'}
+                        </Typography>
+                      )}
+                    </Box>
                   </Stack>
                 </CardContent>
               </Card>
@@ -446,7 +485,7 @@ function MainContent({
               </Card>
 
               {responseInfo && (
-                <Card>
+                <Card component="section" aria-label="Response preview">
                   <CardContent>
                     <Stack spacing={2}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
@@ -489,32 +528,33 @@ function MainContent({
               )}
             </Stack>
           </Grid>
-          {isSnippetCollapsed ? (
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<CodeIcon />}
-                  onClick={() => setIsSnippetCollapsed(false)}
-                >
-                  Show request snippets
-                </Button>
-              </Box>
-            </Grid>
-          ) : (
-            <Grid item xs={12} xl={4}>
-              <RequestSnippetPanel
-                endpoint={currentEndpoint || collection.endpoint || ''}
-                method={(collection.method || 'GET').toUpperCase()}
-                headers={headersState}
-                body={bodyState}
-                collapsed={isSnippetCollapsed}
-                onCollapsedChange={setIsSnippetCollapsed}
-              />
-            </Grid>
-          )}
-        </Grid>
+            {isSnippetCollapsed ? (
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<CodeIcon />}
+                    onClick={() => setIsSnippetCollapsed(false)}
+                  >
+                    Show request snippets
+                  </Button>
+                </Box>
+              </Grid>
+            ) : (
+              <Grid item xs={12} lg={5} xl={4}>
+                <RequestSnippetPanel
+                  endpoint={currentEndpoint || collection.endpoint || ''}
+                  method={(collection.method || 'GET').toUpperCase()}
+                  headers={headersState}
+                  body={bodyState}
+                  collapsed={isSnippetCollapsed}
+                  onCollapsedChange={setIsSnippetCollapsed}
+                />
+              </Grid>
+            )}
+          </Grid>
+        </Box>
       ) : (
         !collectionsLoading && <EmptyState />
       )}

@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -15,7 +15,8 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 
 import RequestBodyEditor from './RequestBodyEditor'
-import { getDefaultBodyState, getDefaultBodyConfig } from '../utils/bodyConfig'
+import { getDefaultBodyState, getDefaultBodyConfig, DEFAULT_FORM_DATA_ROW, DEFAULT_URL_ENCODED_ROW } from '../utils/bodyConfig'
+import { detectCurlCommand, parseCurlCommand } from '../utils/curlParser'
 
 const HTTP_METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -34,10 +35,102 @@ export default function CreateApiForm({ onCreate, onCancel, creating = false }) 
   const [form, setForm] = useState(getDefaultNewCollection())
   const [bodyState, setBodyState] = useState(getDefaultBodyState())
   const [error, setError] = useState('')
+  const [curlNotice, setCurlNotice] = useState('')
+  const [isParsingCurl, setIsParsingCurl] = useState(false)
 
   const handleChange = (field, value) => {
+    if (field === 'endpoint') {
+      if (!detectCurlCommand(value)) {
+        setCurlNotice('')
+      }
+    }
     setForm((prev) => ({ ...prev, [field]: value }))
   }
+
+  const applyParsedCurl = (parsed) => {
+    if (!parsed) return
+
+    setForm((prev) => {
+      let inferredName = prev.name
+      if (!inferredName && parsed.url) {
+        try {
+          const urlObject = new URL(parsed.url)
+          const path = urlObject.pathname === '/' ? urlObject.hostname : urlObject.pathname
+          inferredName = `${parsed.method || 'GET'} ${path}`
+        } catch (error) {
+          inferredName = parsed.url
+        }
+      }
+
+      return {
+        ...prev,
+        name: inferredName || prev.name,
+        endpoint: parsed.url || '',
+        method: parsed.method || prev.method,
+        headers: parsed.headers || {},
+        params: parsed.params || {},
+      }
+    })
+
+    const nextBodyState = (() => {
+      const base = getDefaultBodyState()
+      const mode = parsed.body?.mode || 'none'
+
+      if (mode === 'raw') {
+        base.mode = 'raw'
+        base.raw = parsed.body?.raw || ''
+        base.rawLanguage = parsed.body?.rawLanguage || base.rawLanguage
+      } else if (mode === 'form-data') {
+        base.mode = 'form-data'
+        base.formData = parsed.body?.formData?.length
+          ? parsed.body.formData.map((item) => ({
+              key: item.key || '',
+              value: item.value ?? '',
+              type: item.type || 'text',
+            }))
+          : [{ ...DEFAULT_FORM_DATA_ROW }]
+      } else if (mode === 'urlencoded') {
+        base.mode = 'urlencoded'
+        base.urlEncoded = parsed.body?.urlEncoded?.length
+          ? parsed.body.urlEncoded.map((item) => ({
+              key: item.key || '',
+              value: item.value ?? '',
+            }))
+          : [{ ...DEFAULT_URL_ENCODED_ROW }]
+      } else if (mode === 'graphql') {
+        base.mode = 'graphql'
+        base.graphql = {
+          query: parsed.body?.graphql?.query || '',
+          variables: parsed.body?.graphql?.variables || '{}',
+        }
+      }
+
+      return base
+    })()
+
+    setBodyState(nextBodyState)
+    setCurlNotice('Loaded fields from detected cURL command.')
+  }
+
+  useEffect(() => {
+    if (!detectCurlCommand(form.endpoint)) {
+      setIsParsingCurl(false)
+      return undefined
+    }
+
+    setIsParsingCurl(true)
+    const timer = setTimeout(() => {
+      const parsed = parseCurlCommand(form.endpoint)
+      if (parsed && parsed.url) {
+        applyParsedCurl(parsed)
+      }
+      setIsParsingCurl(false)
+    }, 1000)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [form.endpoint])
 
   const handleSubmit = async () => {
     setError('')
@@ -129,12 +222,16 @@ export default function CreateApiForm({ onCreate, onCancel, creating = false }) 
             onInput={(e) => handleChange('endpoint', e.target.value)}
             fullWidth
             required
+            helperText={
+              detectCurlCommand(form.endpoint)
+                ? isParsingCurl
+                  ? 'Detecting cURL command…'
+                  : 'Detected cURL command. Parsing…'
+                : curlNotice
+            }
           />
 
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>Body</Typography>
-            <RequestBodyEditor bodyState={bodyState} setBodyState={setBodyState} />
-          </Box>
+          <RequestBodyEditor bodyState={bodyState} setBodyState={setBodyState} />
 
           <Stack direction="row" spacing={2}>
             <Button variant="contained" onClick={handleSubmit} disabled={creating}>

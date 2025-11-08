@@ -5,12 +5,14 @@ import { ThemeProvider } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 
 import createAppTheme from './theme'
-import { fetchCollections, createCollection, updateCollection } from './services/apiCollections'
+import { fetchCollections, createCollection, updateCollection, deleteCollection } from './services/apiCollections'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import MainContent from './components/MainContent'
 import CreateApiForm from './components/CreateApiForm'
 import Footer from './components/Footer'
+import About from './components/About'
+import Documentation from './components/Documentation'
 
 const drawerWidth = 280
 
@@ -36,6 +38,8 @@ export function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [isAboutVisible, setIsAboutVisible] = useState(false)
+  const [isDocsVisible, setIsDocsVisible] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
 
   useEffect(() => {
@@ -104,6 +108,8 @@ export function App() {
     setSelectedCollectionId(collectionId)
     setIsSidebarOpen(false)
     setIsCreating(false)
+    setIsAboutVisible(false)
+    setIsDocsVisible(false)
   }
 
   useEffect(() => {
@@ -146,6 +152,8 @@ export function App() {
     setIsCreating(true)
     // close mobile sidebar to reveal main area
     setIsSidebarOpen(false)
+    setIsAboutVisible(false)
+    setIsDocsVisible(false)
   }
 
   const handleCancelCreate = () => {
@@ -170,6 +178,46 @@ export function App() {
 
   const handleFilterChange = (status) => {
     setFilterStatus(status)
+  }
+
+  const handleDeleteCollection = async (collectionId) => {
+    if (!collectionId) return
+    const confirmed = typeof window === 'undefined' ? true : window.confirm('Delete this API collection?')
+    if (!confirmed) return
+
+    const deleted = await deleteCollection(collectionId)
+    if (!deleted) return
+
+    setCollections((prev) => prev.filter((collection) => (collection.id || collection.key) !== collectionId))
+
+    setSelectedCollectionId((prevSelected) => {
+      if (prevSelected === collectionId) {
+        return ''
+      }
+      return prevSelected
+    })
+  }
+
+  const handleAboutClick = () => {
+    setIsAboutVisible(true)
+    setIsCreating(false)
+    setIsSidebarOpen(false)
+    setIsDocsVisible(false)
+  }
+
+  const handleCloseAbout = () => {
+    setIsAboutVisible(false)
+  }
+
+  const handleDocumentationClick = () => {
+    setIsDocsVisible(true)
+    setIsAboutVisible(false)
+    setIsCreating(false)
+    setIsSidebarOpen(false)
+  }
+
+  const handleCloseDocumentation = () => {
+    setIsDocsVisible(false)
   }
 
   const handleToggleTheme = () => {
@@ -231,6 +279,7 @@ export function App() {
             onCreateClick={handleCreateClick}
             filterStatus={filterStatus}
             onFilterChange={handleFilterChange}
+            onDelete={handleDeleteCollection}
           />
           <Box
             component="main"
@@ -241,21 +290,36 @@ export function App() {
               minWidth: 0,
             }}
           >
-            <Box sx={{ flexGrow: 1, p: { xs: 2, md: 4 }, width: '100%' }}>
-              {isCreating ? (
-                <CreateApiForm onCreate={handleCreateCollection} onCancel={handleCancelCreate} />
-              ) : (
-                <MainContent
-                  collection={selectedCollection}
-                  collectionsLoading={collectionsLoading}
-                  collectionsError={collectionsError}
-                  onToggleEnabled={handleToggleEnabled}
-                />
-              )}
+            <Box
+              sx={{
+                flexGrow: 1,
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                px: { xs: 2, sm: 3, md: 4 },
+                py: { xs: 2, sm: 3, md: 4 },
+              }}
+            >
+              <Box sx={{ width: '100%', maxWidth: 1240, display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 } }}>
+                {isDocsVisible ? (
+                  <Documentation onBack={handleCloseDocumentation} />
+                ) : isAboutVisible ? (
+                  <About onBack={handleCloseAbout} />
+                ) : isCreating ? (
+                  <CreateApiForm onCreate={handleCreateCollection} onCancel={handleCancelCreate} />
+                ) : (
+                  <MainContent
+                    collection={selectedCollection}
+                    collectionsLoading={collectionsLoading}
+                    collectionsError={collectionsError}
+                    onToggleEnabled={handleToggleEnabled}
+                  />
+                )}
+              </Box>
             </Box>
           </Box>
         </Box>
-        <Footer />
+        <Footer onAboutClick={handleAboutClick} onDocumentationClick={handleDocumentationClick} />
       </Box>
     </ThemeProvider>
   )

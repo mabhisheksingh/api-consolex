@@ -4,6 +4,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CloseIcon from '@mui/icons-material/Close'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import MenuIcon from '@mui/icons-material/Menu'
 import Box from '@mui/material/Box'
 import Divider from '@mui/material/Divider'
@@ -35,6 +36,7 @@ function Sidebar({
   onCreateClick,
   filterStatus = 'all',
   onFilterChange,
+  onDelete,
 }) {
   const desktopWidth = collapsed ? 72 : drawerWidth
 
@@ -51,6 +53,8 @@ function Sidebar({
 
   const content = (
     <Box
+      component="aside"
+      aria-label="API collections navigation"
       sx={{
         height: '100%',
         display: 'flex',
@@ -85,14 +89,13 @@ function Sidebar({
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 1,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', md: 160 }, flexGrow: 1 }}>
               <InputLabel id="filter-status-label">Filter</InputLabel>
               <Select
                 labelId="filter-status-label"
@@ -120,17 +123,34 @@ function Sidebar({
         </Box>
       </Box>
       <Divider />
-      <List sx={{ flexGrow: 1, overflowY: 'auto', py: 0 }}>
+      <List sx={{ flexGrow: 1, overflowY: 'auto', py: 0 }} component="nav" aria-label="API collection list">
         {collections.map((collection) => {
           const identifier = collection.id || collection.key
           const isSelected = identifier === selectedId
           const Icon = collection.isEnabled ? CheckCircleIcon : HighlightOffIcon
           return (
-            <ListItem key={identifier} disablePadding>
+            <ListItem key={identifier} disablePadding secondaryAction={
+              onDelete ? (
+                <Tooltip title="Delete API" placement="left">
+                  <IconButton
+                    edge="end"
+                    aria-label="Delete API"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onDelete(identifier)
+                    }}
+                    size="small"
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              ) : null
+            }>
               <ListItemButton
                 selected={isSelected}
                 onClick={() => onSelect(identifier)}
-                sx={{ alignItems: 'flex-start', py: 1.5 }}
+                sx={{ alignItems: 'flex-start', py: 1.5, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}
+                aria-current={isSelected ? 'true' : undefined}
               >
                 <ListItemIcon sx={{ mt: 0.5 }}>
                   {collection.isEnabled ? (
@@ -141,12 +161,16 @@ function Sidebar({
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>
                       {collection.name}
                     </Typography>
                   }
                   secondary={
-                    <Typography variant="body2" color="text.secondary" noWrap>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                    >
                       {collection.description || 'No description provided'}
                     </Typography>
                   }

@@ -49,7 +49,11 @@ function RequestBodyEditor({ bodyState, setBodyState }) {
     <Stack spacing={2}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
         <Typography variant="subtitle1">Body</Typography>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ flexWrap: 'wrap', gap: { xs: 1, sm: 1 }, rowGap: { xs: 1, sm: 1 } }}
+        >
           {BODY_MODE_OPTIONS.map((option) => (
             <Button
               key={option.value}
