@@ -216,8 +216,8 @@ function Sidebar({
             return {
               boxSizing: 'border-box',
               width: drawerWidth,
-              top: toolbarHeight,
-              height: `calc(100% - ${toolbarHeight}px)`,
+              top: `var(--app-shell-header-height, ${toolbarHeight}px)`,
+              height: `calc(100% - var(--app-shell-header-height, ${toolbarHeight}px))`,
             }
           },
         }}

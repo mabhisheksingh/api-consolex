@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'preact/hooks'
 import AppBar from '@mui/material/AppBar'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
@@ -11,6 +12,39 @@ import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
 
 function Header({ onMenuClick, sidebarVisible, colorMode = 'dark', onToggleTheme }) {
+  const toolbarRef = useRef(null)
+
+  useEffect(() => {
+    const element = toolbarRef.current
+    if (!element || typeof window === 'undefined' || typeof document === 'undefined') return undefined
+
+    const setHeightVariable = () => {
+      const height = element.offsetHeight || 0
+      document.documentElement.style.setProperty('--app-shell-header-height', `${height}px`)
+    }
+
+    setHeightVariable()
+
+    let observer
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        setHeightVariable()
+      })
+      observer.observe(element)
+    } else {
+      window.addEventListener('resize', setHeightVariable)
+    }
+
+    return () => {
+      document.documentElement.style.removeProperty('--app-shell-header-height')
+      if (observer) {
+        observer.disconnect()
+      } else {
+        window.removeEventListener('resize', setHeightVariable)
+      }
+    }
+  }, [])
+
   return (
     <AppBar
       position="sticky"
@@ -21,12 +55,16 @@ function Header({ onMenuClick, sidebarVisible, colorMode = 'dark', onToggleTheme
       }}
     >
       <Toolbar
+        ref={toolbarRef}
         sx={{
           justifyContent: 'space-between',
           gap: 2,
           flexWrap: 'wrap',
           alignItems: { xs: 'flex-start', sm: 'center' },
-          rowGap: { xs: 1.5, sm: 0 },
+          rowGap: { xs: 1, sm: 0 },
+          minHeight: { xs: 68, sm: 72 },
+          py: { xs: 1, sm: 1 },
+          position: 'relative',
         }}
       >
         <Stack
@@ -65,11 +103,28 @@ function Header({ onMenuClick, sidebarVisible, colorMode = 'dark', onToggleTheme
             </Typography>
           </Box>
         </Stack>
-        <Tooltip title={`Switch to ${colorMode === 'dark' ? 'light' : 'dark'} mode`}>
-          <IconButton color="inherit" onClick={onToggleTheme} aria-label="Toggle color mode">
-            {colorMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-          </IconButton>
-        </Tooltip>
+        <Box
+          sx={{
+            position: { xs: 'absolute', sm: 'static' },
+            top: { xs: 8, sm: 'auto' },
+            right: { xs: 8, sm: 'auto' },
+            ml: { xs: 0, sm: 'auto' },
+            alignSelf: { xs: 'flex-start', sm: 'center' },
+          }}
+        >
+          <Tooltip title={`Switch to ${colorMode === 'dark' ? 'light' : 'dark'} mode`}>
+            <IconButton
+              color="inherit"
+              onClick={onToggleTheme}
+              aria-label="Toggle color mode"
+              sx={{
+                alignSelf: 'flex-start',
+              }}
+            >
+              {colorMode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Toolbar>
     </AppBar>
   )

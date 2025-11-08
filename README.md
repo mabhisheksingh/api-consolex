@@ -2,6 +2,12 @@
 
 API ConsoleX is a modern API exploration console built with Preact and Material UI. It lets you browse, test, and manage API endpoint definitions with a polished UI, inspired by tools like Postman. Collections are persisted locally and can be easily deployed to GitHub Pages.
 
+> **New in v2.0.0**
+> - Mobile layout refinements with centered main content and consistent spacing.
+> - In-app **About** and **Documentation** views (renders `README.md` with parsed Markdown).
+> - Smart cURL detection in the **Create API** form to auto-fill method, headers, params, and body.
+> - Sidebar deletion controls, footer navigation updates, and enhanced SEO metadata.
+
 ## Features
 
 - **Collections management**: Create, edit, enable/disable, and delete API definitions.
