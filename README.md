@@ -2,6 +2,8 @@
 
 API ConsoleX is a modern API exploration console built with Preact and Material UI. It lets you browse, test, and manage API endpoint definitions with a polished UI, inspired by tools like Postman. Collections are persisted locally and can be easily deployed to GitHub Pages.
 
+Live site: [https://postman.bharatai.space/](https://postman.bharatai.space/)
+
 > **New in v2.0.0**
 > - Mobile layout refinements with centered main content and consistent spacing.
 > - In-app **About** and **Documentation** views (renders `README.md` with parsed Markdown).
@@ -37,7 +39,7 @@ npm install
 npm run dev
 ```
 
-The app serves at `http://localhost:5173/api-consolex/`. The Vite dev server proxies `/api/` to `http://localhost:3000`; start your backend there or adjust `vite.config.js`.
+The app serves at `http://localhost:5173/`. The Vite dev server proxies `/api/` to `http://localhost:3000`; start your backend there or adjust `vite.config.js`.
 
 ### Production build
 
@@ -49,13 +51,20 @@ Output is written to `dist/`.
 
 ### GitHub Pages deployment
 
-Update `homepage` in `package.json` with your GitHub username (already set to `https://mabhisheksingh.github.io/api-consolex/`), then run:
+Update `homepage` in `package.json` to match the production URL (currently `https://postman.bharatai.space/`), then run:
 
 ```bash
 npm run deploy
 ```
 
 This script runs `npm run build` and publishes `dist/` to the `gh-pages` branch via `gh-pages`.
+
+### Custom domain configuration
+
+- Ensure `public/CNAME` contains your domain (`postman.bharatai.space`).
+- Set a `CNAME` DNS record pointing `postman.bharatai.space` to `mabhisheksingh.github.io`.
+- `vite.config.js` is configured with `base: '/'` so assets resolve correctly when served from the root of the custom domain.
+- After pushing to `gh-pages`, verify that GitHub Pages recognizes the custom domain in the repository settings.
 
 ## Project Structure
 
@@ -69,7 +78,7 @@ api-consolex/
 │  └─ theme.js           # Material UI theme factory
 ├─ data/apiCollections.json  # Seed data for API definitions
 ├─ docs/                 # Additional documentation
-├─ vite.config.js        # Vite configuration with GitHub Pages base path
+├─ vite.config.js        # Vite configuration targeting root base for custom domain
 └─ package.json          # Scripts and dependencies
 ```
 
